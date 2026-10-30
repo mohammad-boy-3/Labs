@@ -61,7 +61,7 @@ const ld=new R.Mesh(new R.CircleGeometry(.62,32),new R.MeshBasicMaterial({color:
 const sr=new R.Mesh(new R.CylinderGeometry(.02,.02,1.05,8),new R.MeshPhongMaterial({color:0xeeeeee}));sr.visible=false;fg.add(sr);
 const N=500,pos=new Float32Array(N*3),vel=new Float32Array(N*3),act=new Uint8Array(N);for(let i=0;i<N;i++)pos[i*3+1]=-.2;
 const pgm=new R.BufferGeometry();pgm.setAttribute('position',new R.BufferAttribute(pos,3));
-const pts=new R.Points(pgm,new R.PointsMaterial({color:0xffffff,size:.06,transparent:true,opacity:.85,depthWrite:false}));pts.frustumCulled=false;fg.add(pts);
+const pts=new R.Points(pgm,new R.PointsMaterial({color:0xf7fbff,size:.035,transparent:true,opacity:.48,depthWrite:false}));pts.frustumCulled=false;fg.add(pts);
 let lastH=-1;
 function liq(h){lq.visible=h>.05;if(!lq.visible)return;const p=[V2(0,.03)];for(let i=0;i<=20;i++){const y=.03+(h-.03)*i/20;p.push(V2(rIn(y),y))}p.push(V2(0,h));lq.geometry.dispose();lq.geometry=new R.LatheGeometry(p,40)}
 // ---- قیف، لوله، حباب‌ها ----
@@ -122,7 +122,9 @@ function step(dt,t){
  const dis=Math.min(S.U,Math.max(0,5*S.w-S.D),(S.stirE>.05?1.5:.05)*dt*S.w);S.U-=dis;S.D+=dis;
  const co2=S.flow*dt*.12;
  if(h>.35&&co2>0){S.co2+=co2;const dn=Math.min(S.D,co2*.9);S.D-=dn;S.CC+=dn;const ex=co2*.9-dn;if(ex>0&&S.U<.01)S.CC=Math.max(0,S.CC-ex*.25)}
- S.turb=1-Math.exp(-(S.CC/Math.max(S.w,.15))/3);
+ // کدورت از رسوب نامحلول CaCO3 می‌آید، نه از خود گاز CO2.
+ const caco3Conc=S.CC/Math.max(S.w,.15);
+ S.turb=clamp(1-Math.exp(-caco3Conc/1.5),0,.98);
  ld.material.opacity=Math.min(.85,S.U/2.5*.8);ld.visible=S.U>.05;
  sr.visible=S.stirT>0&&h>.15;sr.position.set(Math.cos(t*7)*.2,.6,Math.sin(t*7)*.2);
  // ذرات CaCO3
@@ -137,8 +139,13 @@ function step(dt,t){
   const rm=rIn(y)-.04,rr=Math.hypot(x,z);if(rr>rm){x*=rm/rr;z*=rm/rr}
   pos[j]=x;pos[j+1]=y;pos[j+2]=z;vel[j]=vx;vel[j+1]=vy;vel[j+2]=vz;ac++;if(y<.09)st++}
  pgm.attributes.position.needsUpdate=true;
- S.milk+=(S.turb*(.3+.7*(1-(ac?st/ac:0)))-S.milk)*Math.min(1,dt*2);
- lm.color.setRGB(.62+.34*S.milk,.85+.11*S.milk,1-.07*S.milk);lm.opacity=.3+.6*S.milk;
+ // رسوبِ تازه در مایع پخش می‌شود؛ هم‌زدن و عبور حباب‌ها آن را معلق نگه می‌دارند.
+ const suspended=ac?1-st/ac:0;
+ const agitation=clamp(Math.max(suspended,S.stirE,S.flow*.75),0,1);
+ const milkTarget=S.turb*(.62+.38*agitation);
+ S.milk+=(milkTarget-S.milk)*Math.min(1,dt*2.8);
+ // با افزایش رسوب، مایع از شفافِ آبی به سفیدِ شیری و کدر تبدیل می‌شود.
+ lm.color.setRGB(.62+.36*S.milk,.85+.13*S.milk,1-.08*S.milk);lm.opacity=.3+.65*S.milk;
  hz.visible=S.flow>.03;hz.position.set(fp.x,fp.y-.1,fp.z);hz.scale.setScalar(.5+S.flow*.6);hz.material.opacity=clamp(S.flow,0,1)*.5;
  // حباب‌های لوله و محلول
  tb.forEach(b=>{if(S.flow>.03){b.t=(b.t+dt*(.12+.3*S.flow))%1;b.m.position.copy(curve.getPointAt(b.t));b.m.visible=true}else b.m.visible=false});
@@ -156,7 +163,7 @@ function step(dt,t){
  else if(cs==4)m='قیف را با ماوس/لمس بالای شعله ببر و ارتفاعش را تنظیم کن.';
  else if(S.w<.37)m='انتهای لوله بالای سطح مایع است؛ آب بیشتر بریز تا گاز وارد محلول شود.';
  else if(S.CC>2&&S.D<.05&&S.U<.05&&S.flow>.2)m='CO₂ اضافی، CaCO₃ را به Ca(HCO₃)₂ محلول تبدیل می‌کند و محلول کم‌کم زلال می‌شود.';
- else if(S.turb>.55)m='آب‌آهک شیری شد؛ ذرات CaCO₃ آهسته ته‌نشین می‌شوند (با هم‌زدن دوباره معلق می‌شوند).';
+ else if(S.turb>.3)m='CO₂ با آب‌آهک واکنش داده و رسوب سفید CaCO₃ ساخته است؛ محلول شیری و کدر شده است.';
  else if(S.lit&&S.flow<.05)m='گاز کافی وارد نمی‌شود؛ قیف را دقیق‌تر بالای شعله و نزدیک‌تر ببر.';
  else m='گاز در حال ورود به محلول است؛ تغییر رنگ را دنبال کن.';
  $('msg').textContent=m;
