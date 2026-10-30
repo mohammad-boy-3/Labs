@@ -1,0 +1,167 @@
+<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>شبیه‌ساز شمع و آب‌آهک</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--pn:rgba(255,255,255,.93);--tx:#1b2433;--bd:#c5d0e0;--ac:#0b6bcb;--bt:#eef3fa;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--pn:rgba(16,24,38,.92);--tx:#e6edf7;--bd:#2c3b55;--ac:#5db4ff;--bt:#1d2a40}}
+:root[data-theme=dark]{--pn:rgba(16,24,38,.92);--tx:#e6edf7;--bd:#2c3b55;--ac:#5db4ff;--bt:#1d2a40}
+html,body{height:100%;margin:0;overflow:hidden;background:#101826;font-family:Vazirmatn,Tahoma,sans-serif}
+canvas{display:block;touch-action:none}
+#p{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:8px;width:min(300px,calc(100vw - 16px));max-height:calc(100% - 56px);overflow:auto;background:var(--pn);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.7}
+h1{font-size:15px;margin:0 0 4px}#p.m>*:not(h1){display:none}.eq{direction:ltr;text-align:center;font-weight:700;color:var(--ac);padding:4px;border:1px dashed var(--bd);border-radius:8px}
+ol{margin:6px 0;padding:0 18px}li{opacity:.55}li.d{opacity:.8;text-decoration:line-through}li.c{opacity:1;font-weight:700;color:var(--ac)}
+#msg{min-height:40px;padding:6px 8px;border-radius:8px;background:var(--bt);margin:6px 0}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:6px}button{font:inherit;padding:7px;border-radius:8px;border:1px solid var(--bd);background:var(--bt);color:var(--tx);cursor:pointer}button:hover{border-color:var(--ac)}
+label{display:block;margin-top:6px;font-size:12px}input[type=range]{width:100%}
+.inf{margin-top:6px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:12px}.inf b{direction:ltr}
+#cr{position:fixed;left:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));color:#c9d6ea;background:rgba(0,0,0,.35);padding:4px 10px;border-radius:8px;font-size:12px}
+</style></head><body>
+<div id="p"><h1><button id="tg" style="float:left;padding:0 10px">–</button>آزمایش سوختن شمع و شیری‌شدن آب‌آهک</h1>
+<div class="eq">Ca(OH)₂ + CO₂ → CaCO₃↓ + H₂O</div>
+<ol id="st"><li>ریختن آب در ارلن</li><li>افزودن کلسیم هیدروکسید</li><li>هم‌زدن تا حل شود</li><li>روشن‌کردن شمع</li><li>کشیدن قیف بالای شعله (ماوس/لمس)</li><li>مشاهدهٔ شیری‌شدن محلول</li></ol>
+<div id="msg"></div>
+<div class="g"><button id="b1">ریختن آب</button><button id="b2">افزودن Ca(OH)₂</button><button id="b3">هم‌زدن</button><button id="b4">روشن/خاموش شمع</button><button id="b6">سرعت: ×۱</button><button id="b5">بازنشانی</button></div>
+<label>اندازهٔ شعله<input id="sz" type="range" min=".5" max="1.5" step=".05" value="1"></label>
+<label>ارتفاع قیف<input id="fh" type="range" min="1" max="3" step=".05" value="2.4"></label>
+<div class="inf"><span>دمای دهانهٔ قیف</span><b id="i1"></b><span>CO₂ وارد‌شده</span><b id="i2"></b><span>کدورت</span><b id="i3"></b><span>غلظت آب‌آهک</span><b id="i4"></b><span>ارتفاع شمع</span><b id="i5"></b></div></div>
+<div id="cr">این اثر توسط محمد سلیمانی ساخته شده.</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const R=THREE,$=i=>document.getElementById(i),V=(x,y,z)=>new R.Vector3(x,y,z),V2=(x,y)=>new R.Vector2(x,y),fa=(x,d=1)=>x.toLocaleString('fa-IR',{maximumFractionDigits:d});
+const CX=-1.6,FX=2,dom=document.createElement('canvas');
+// ---- صحنه و رندر ----
+const rd=new R.WebGLRenderer({antialias:true,canvas:dom});rd.setPixelRatio(Math.min(devicePixelRatio,2));rd.shadowMap.enabled=true;rd.shadowMap.type=R.PCFSoftShadowMap;document.body.prepend(dom);
+const sc=new R.Scene();sc.background=new R.Color(0x101826);
+const cam=new R.PerspectiveCamera(48,1,.1,60);cam.position.set(0,3.6,9);
+const oc=new R.OrbitControls(cam,dom);oc.target.set(0,1.7,0);oc.enableDamping=true;oc.maxPolarAngle=1.5;oc.update();
+sc.add(new R.HemisphereLight(0xbcd4ff,0x40302a,.55));
+const dl=new R.DirectionalLight(0xffffff,.6);dl.position.set(4,8,5);dl.castShadow=true;dl.shadow.mapSize.set(1024,1024);Object.assign(dl.shadow.camera,{left:-8,right:8,top:8,bottom:-8});dl.shadow.camera.updateProjectionMatrix();sc.add(dl);
+const pl=new R.PointLight(0xffa860,0,7);sc.add(pl);
+const table=new R.Mesh(new R.BoxGeometry(11,.4,5),new R.MeshStandardMaterial({color:0x6b4a2f,roughness:.8}));table.position.y=-.2;table.receiveShadow=true;sc.add(table);
+const glassM=(o)=>new R.MeshPhongMaterial({color:0xcfe8ff,transparent:true,opacity:o,shininess:120,specular:0xffffff,side:R.DoubleSide,depthWrite:false});
+// ---- شمع ----
+const cg=new R.CylinderGeometry(.18,.18,1,32);cg.translate(0,.5,0);
+const candle=new R.Mesh(cg,new R.MeshStandardMaterial({color:0xf6efe0,roughness:.6}));candle.position.x=CX;candle.castShadow=true;sc.add(candle);
+const wick=new R.Mesh(new R.CylinderGeometry(.012,.012,.1,6),new R.MeshBasicMaterial({color:0x222222}));sc.add(wick);
+const pool=new R.Mesh(new R.CylinderGeometry(.165,.165,.03,24),new R.MeshPhongMaterial({color:0xfff0b0,transparent:true,opacity:.75}));sc.add(pool);
+const pd=new R.Mesh(new R.CylinderGeometry(1,1,.02,32),new R.MeshPhongMaterial({color:0xf3e8c8}));pd.position.set(CX,.01,0);sc.add(pd);
+const glow=(a,b)=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,a);r.addColorStop(1,b);g.fillStyle=r;g.fillRect(0,0,64,64);return new R.CanvasTexture(c)};
+const fo=new R.Sprite(new R.SpriteMaterial({map:glow('rgba(255,225,110,1)','rgba(255,110,0,0)'),blending:R.AdditiveBlending,depthWrite:false}));
+const fi=new R.Sprite(new R.SpriteMaterial({map:glow('rgba(130,180,255,1)','rgba(40,80,255,0)'),blending:R.AdditiveBlending,depthWrite:false}));sc.add(fo,fi);
+const dg=new R.SphereGeometry(.03,8,8),dr=[...Array(5)].map(()=>{const m=new R.Mesh(dg,pool.material);m.visible=false;sc.add(m);return{m,on:0,a:0,y:0}});
+const smT=glow('rgba(210,210,210,.7)','rgba(150,150,150,0)'),sm=[...Array(30)].map(()=>{const s=new R.Sprite(new R.SpriteMaterial({map:smT,transparent:true,depthWrite:false}));s.visible=false;sc.add(s);return{s,l:0,r:0}});
+// ---- ارلن‌مایر ----
+const PR=[[0,0],[.74,0],[.76,.05],[.72,.2],[.24,1.2],[.24,1.9],[.28,1.95]];
+const rIn=y=>{y=Math.max(.03,Math.min(y,1.9));for(let i=1;i<PR.length;i++){const a=PR[i-1],b=PR[i];if(y<=b[1]){const k=(y-a[1])/(b[1]-a[1]||1);return a[0]+(b[0]-a[0])*k-.03}}return .2};
+const fg=new R.Group();fg.position.x=FX;sc.add(fg);
+fg.add(new R.Mesh(new R.LatheGeometry(PR.map(p=>V2(p[0],p[1])),48),glassM(.22)));
+const lm=glassM(.3);lm.color=new R.Color(.62,.85,1);const lq=new R.Mesh(new R.BufferGeometry(),lm);fg.add(lq);
+const cork=new R.Mesh(new R.CylinderGeometry(.24,.2,.16,20),new R.MeshStandardMaterial({color:0x9a6b3a}));cork.position.y=1.97;fg.add(cork);
+const ld=new R.Mesh(new R.CircleGeometry(.62,32),new R.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0}));ld.rotation.x=-Math.PI/2;ld.position.y=.035;fg.add(ld);
+const sr=new R.Mesh(new R.CylinderGeometry(.02,.02,1.05,8),new R.MeshPhongMaterial({color:0xeeeeee}));sr.visible=false;fg.add(sr);
+const N=500,pos=new Float32Array(N*3),vel=new Float32Array(N*3),act=new Uint8Array(N);for(let i=0;i<N;i++)pos[i*3+1]=-.2;
+const pgm=new R.BufferGeometry();pgm.setAttribute('position',new R.BufferAttribute(pos,3));
+const pts=new R.Points(pgm,new R.PointsMaterial({color:0xffffff,size:.06,transparent:true,opacity:.85,depthWrite:false}));pts.frustumCulled=false;fg.add(pts);
+let lastH=-1;
+function liq(h){lq.visible=h>.05;if(!lq.visible)return;const p=[V2(0,.03)];for(let i=0;i<=20;i++){const y=.03+(h-.03)*i/20;p.push(V2(rIn(y),y))}p.push(V2(0,h));lq.geometry.dispose();lq.geometry=new R.LatheGeometry(p,40)}
+// ---- قیف، لوله، حباب‌ها ----
+const fm=new R.Mesh(new R.CylinderGeometry(.07,.6,.76,32,1,true),glassM(.3));sc.add(fm);
+const tube=new R.Mesh(new R.BufferGeometry(),glassM(.35));sc.add(tube);let curve,lk='';
+function rebuildTube(){const p=fm.position,top=p.y+.38;curve=new R.CatmullRomCurve3([V(p.x,top,p.z),V(p.x,top+.35,p.z),V((p.x+FX)/2,Math.max(top+.5,3.2),p.z/2),V(FX,2.7,0),V(FX,2.2,0),V(FX,.35,0)],false,'centripetal');tube.geometry.dispose();tube.geometry=new R.TubeGeometry(curve,64,.04,8,false)}
+const bg=new R.SphereGeometry(.03,8,8),bm=new R.MeshPhongMaterial({color:0xffffff,transparent:true,opacity:.7});
+const mk=n=>[...Array(n)].map((_,i)=>{const m=new R.Mesh(bg,bm);m.visible=false;sc.add(m);return{m,t:i/n,on:0}});
+const tb=mk(18),bb=mk(30);
+const hz=new R.Sprite(new R.SpriteMaterial({map:glow('rgba(255,255,255,.8)','rgba(255,255,255,0)'),transparent:true,depthWrite:false}));sc.add(hz); // مه گاز جمع‌شده در قیف
+// ---- وضعیت ----
+const init=()=>({w:0,wT:0,U:0,D:0,CC:0,co2:0,lit:false,out:false,size:1,candleH:1,fh:2.4,stirT:0,stirE:0,flow:0,fl:0,turb:0,milk:0,temp:22,pud:0,smoke:0,note:'',nt:0});
+let S=init();fm.position.set(0,2.8,1.1);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),note=m=>{S.note=m;S.nt=6},ext=m=>{if(!S.lit)return;S.lit=false;S.smoke=2.5;note(m)};
+// ---- کشیدن قیف ----
+const ray=new R.Raycaster(),mv=V2(0,0),pn=new R.Plane(V(0,1,0),0),pt=V(0,0,0),off=V(0,0,0);let drag=0;
+const setM=e=>{const b=dom.getBoundingClientRect();mv.set((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1);ray.setFromCamera(mv,cam)};
+dom.addEventListener('pointerdown',e=>{setM(e);if(ray.intersectObject(fm).length){drag=1;oc.enabled=false;pn.constant=-fm.position.y;ray.ray.intersectPlane(pn,pt);off.copy(fm.position).sub(pt);dom.style.cursor='grabbing'}},true);
+addEventListener('pointermove',e=>{if(!drag)return;setM(e);if(ray.ray.intersectPlane(pn,pt)){fm.position.x=clamp(pt.x+off.x,-3.2,1);fm.position.z=clamp(pt.z+off.z,-1.8,1.8)}});
+const up=()=>{drag=0;oc.enabled=true;dom.style.cursor=''};addEventListener('pointerup',up);addEventListener('pointercancel',up);
+// ---- دکمه‌ها ----
+$('b1').onclick=()=>{S.wT=Math.min(1,S.wT+.25)};
+$('b2').onclick=()=>{S.wT<.05?note('ابتدا آب بریز، بعد کلسیم هیدروکسید اضافه کن.'):S.U+=2.5};
+$('b3').onclick=()=>{S.w<.1?note('ارلن تقریباً خالی است؛ چیزی برای هم‌زدن نیست.'):S.stirT=4};
+$('b4').onclick=()=>{if(S.out)note('شمع تمام شده است.');else if(S.lit)ext('شمع را خاموش کردی؛ دود برمی‌خیزد.');else S.lit=true};
+$('b5').onclick=()=>{S=init();fm.position.set(0,2.8,1.1);$('sz').value=1;$('fh').value=2.4;act.fill(0);pos.fill(0);for(let i=0;i<N;i++)pos[i*3+1]=-.2;lastH=-1;lk=''};
+let SP=1;$('tg').onclick=()=>$('p').classList.toggle('m');$('b6').onclick=e=>{SP=SP==1?3:1;e.target.textContent='سرعت: ×'+(SP==1?'۱':'۳')};$('sz').oninput=e=>S.size=+e.target.value;$('fh').oninput=e=>S.fh=+e.target.value;
+// ---- حلقهٔ شبیه‌سازی ----
+let T0=performance.now(),tm=0,fc=0;
+function step(dt,t){
+ // موقعیت قیف نسبت به شعله
+ const fp=fm.position,d=Math.hypot(fp.x-CX,fp.z),wt=S.candleH+.1,ft=wt+.65*S.size;
+ let fy=S.fh;if(d<.62)fy=Math.max(fy,S.candleH+.05);fp.y=fy+.38;
+ const gap=fy-ft;let oxy=1;if(d<.5&&gap<.1)oxy=clamp((gap+.15)/.25,0,1);
+ if(S.lit&&oxy<.05)ext('شعله به‌دلیل کمبود اکسیژن (قیف روی شعله) خاموش شد.');
+ const eff=Math.exp(-((d/.55)**2))*Math.exp(-Math.max(gap,0)/.8);
+ const k=fp.x+','+fp.y+','+fp.z;if(k!==lk){lk=k;rebuildTube()}
+ // سوختن شمع
+ S.fl+=((S.lit?S.size*oxy:0)-S.fl)*Math.min(1,dt*5);
+ if(S.lit){S.candleH-=.015*S.fl*dt;if(S.candleH<.08){S.candleH=.08;S.out=true;ext('شمع تمام شد و شعله خاموش شد.')}}
+ const tg=S.lit?eff*S.fl:0;S.flow+=(tg-S.flow)*Math.min(1,dt*2);
+ S.temp+=((22+(S.lit?70*S.size*Math.exp(-((d/.7)**2))*Math.exp(-Math.abs(gap)/.9):0))-S.temp)*Math.min(1,dt*1.5);
+ candle.scale.y=S.candleH;wick.position.set(CX,S.candleH+.05,0);pool.position.set(CX,S.candleH+.015,0);pool.visible=S.lit||S.fl>.1;
+ const pr=.22+(1-S.candleH)*.25+S.pud;pd.scale.set(pr,1,pr);
+ // شعله
+ const fk=1+.1*Math.sin(t*23)+.07*Math.sin(t*37+1)+.04*Math.sin(t*11);
+ fo.visible=fi.visible=S.fl>.02;fo.scale.set(.3*S.fl,.7*S.fl*fk,1);fo.position.set(CX+.015*Math.sin(t*9)*S.fl,wt+.32*S.fl*fk,0);fi.scale.set(.15*S.fl,.25*S.fl,1);fi.position.set(CX,wt+.1*S.fl,0);
+ pl.position.set(CX,wt+.3,0);pl.intensity=S.fl*1.6*(.9+.1*fk);
+ // قطرهٔ موم
+ if(S.lit&&S.candleH>.25&&Math.random()<dt*.3){const q=dr.find(x=>!x.on);if(q){q.on=1;q.a=Math.random()*6.28;q.y=S.candleH}}
+ dr.forEach(q=>{q.m.visible=!!q.on;if(q.on){q.y-=.22*dt;if(q.y<.03){q.on=0;S.pud=Math.min(.45,S.pud+.012)}q.m.position.set(CX+Math.cos(q.a)*.19,q.y,Math.sin(q.a)*.19)}});
+ // دود
+ if(S.smoke>0){S.smoke-=dt;const q=sm.find(x=>x.l<=0);if(q&&Math.random()<dt*14){q.l=3;q.r=Math.random()*6;q.s.position.set(CX,wt,0)}}
+ sm.forEach(q=>{if(q.l>0){q.l-=dt;q.s.position.y+=.35*dt;q.s.position.x+=Math.sin(t*2+q.r)*.05*dt;const u=1-q.l/3;q.s.scale.setScalar(.15+u*.6);q.s.material.opacity=.45*(1-u)}q.s.visible=q.l>0});
+ // آب و شیمی: Ca(OH)2 + CO2 -> CaCO3 + H2O (واحد میلی‌مول، ارلن ۲۵۰ mL)
+ S.w=Math.min(S.wT,S.w+.25*dt);const h=.95*S.w;if(Math.abs(h-lastH)>.004){lastH=h;liq(h)}
+ if(S.stirT>0){S.stirT-=dt;S.stirE=Math.min(1,S.stirE+dt*3)}else S.stirE*=Math.exp(-dt*1.2);
+ const dis=Math.min(S.U,Math.max(0,5*S.w-S.D),(S.stirE>.05?1.5:.05)*dt*S.w);S.U-=dis;S.D+=dis;
+ const co2=S.flow*dt*.12;
+ if(h>.35&&co2>0){S.co2+=co2;const dn=Math.min(S.D,co2*.9);S.D-=dn;S.CC+=dn;const ex=co2*.9-dn;if(ex>0&&S.U<.01)S.CC=Math.max(0,S.CC-ex*.25)}
+ S.turb=1-Math.exp(-(S.CC/Math.max(S.w,.15))/3);
+ ld.material.opacity=Math.min(.85,S.U/2.5*.8);ld.visible=S.U>.05;
+ sr.visible=S.stirT>0&&h>.15;sr.position.set(Math.cos(t*7)*.2,.6,Math.sin(t*7)*.2);
+ // ذرات CaCO3
+ const tgt=h>.1?Math.floor(N*Math.pow(S.turb,.7)):0;let st=0,ac=0;
+ for(let i=0;i<N;i++){const j=i*3;
+  if(i>=tgt){if(act[i]){act[i]=0;pos[j+1]=-.2}continue}
+  if(!act[i]){act[i]=1;const a=Math.random()*6.28,r=Math.random()*.3;pos[j]=Math.cos(a)*r;pos[j+2]=Math.sin(a)*r;pos[j+1]=.3+Math.random()*.2;vel[j]=vel[j+1]=vel[j+2]=0}
+  let x=pos[j],y=pos[j+1],z=pos[j+2],vx=vel[j],vy=vel[j+1],vz=vel[j+2];const sw=S.stirE*7;
+  vx+=(-z*sw+(Math.random()-.5)*.25)*dt;vz+=(x*sw+(Math.random()-.5)*.25)*dt;vy+=(-.12+S.stirE*(Math.random()*1.6-.1))*dt;
+  const kk=Math.exp(-3*dt);vx*=kk;vy*=kk;vz*=kk;x+=vx*dt;y+=vy*dt;z+=vz*dt;
+  if(y<.06){y=.06;vy=0;vx*=.3;vz*=.3}if(y>h-.02){y=h-.02;vy=-Math.abs(vy)}
+  const rm=rIn(y)-.04,rr=Math.hypot(x,z);if(rr>rm){x*=rm/rr;z*=rm/rr}
+  pos[j]=x;pos[j+1]=y;pos[j+2]=z;vel[j]=vx;vel[j+1]=vy;vel[j+2]=vz;ac++;if(y<.09)st++}
+ pgm.attributes.position.needsUpdate=true;
+ S.milk+=(S.turb*(.3+.7*(1-(ac?st/ac:0)))-S.milk)*Math.min(1,dt*2);
+ lm.color.setRGB(.62+.34*S.milk,.85+.11*S.milk,1-.07*S.milk);lm.opacity=.3+.6*S.milk;
+ hz.visible=S.flow>.03;hz.position.set(fp.x,fp.y-.1,fp.z);hz.scale.setScalar(.5+S.flow*.6);hz.material.opacity=clamp(S.flow,0,1)*.5;
+ // حباب‌های لوله و محلول
+ tb.forEach(b=>{if(S.flow>.03){b.t=(b.t+dt*(.12+.3*S.flow))%1;b.m.position.copy(curve.getPointAt(b.t));b.m.visible=true}else b.m.visible=false});
+ if(h>.35&&S.flow>.02&&Math.random()<dt*S.flow*14){const q=bb.find(x=>!x.on);if(q){q.on=1;q.m.position.set(FX+(Math.random()-.5)*.05,.33,(Math.random()-.5)*.05)}}
+ bb.forEach(q=>{if(q.on){q.m.position.y+=.55*dt;q.m.position.x+=(Math.random()-.5)*.01;if(q.m.position.y>h)q.on=0}q.m.visible=!!q.on});
+ // رابط کاربری
+ if(S.nt>0)S.nt-=dt;if(fc++%5)return;
+ const tot=S.U+S.D+S.CC,np=S.co2<.02;
+ const cs=S.w<.05?0:tot<.3?1:(S.U>.05&&S.CC<.05)?2:(!S.lit&&np&&S.flow<.05)?3:(np&&S.flow<.05)?4:5;
+ [...$('st').children].forEach((l,i)=>l.className=i<cs?'d':i==cs?'c':'');
+ let m;if(S.nt>0)m=S.note;
+ else if(S.lit&&S.flow>.05&&tot<.3)m='CO₂ در آب خالی تغییر محسوسی نمی‌دهد؛ برای دیدن واکنش باید آب‌آهک بسازی.';
+ else if(cs==0)m='ارلن خالی است؛ ابتدا آب بریز.';else if(cs==1)m='آب ریخته شد. حالا کلسیم هیدروکسید اضافه کن.';
+ else if(cs==2)m='ذرات حل‌نشده ته ارلن‌اند؛ هم بزن تا آب‌آهک شفاف بسازی.';else if(cs==3)m='شمع را روشن کن.';
+ else if(cs==4)m='قیف را با ماوس/لمس بالای شعله ببر و ارتفاعش را تنظیم کن.';
+ else if(S.w<.37)m='انتهای لوله بالای سطح مایع است؛ آب بیشتر بریز تا گاز وارد محلول شود.';
+ else if(S.CC>2&&S.D<.05&&S.U<.05&&S.flow>.2)m='CO₂ اضافی، CaCO₃ را به Ca(HCO₃)₂ محلول تبدیل می‌کند و محلول کم‌کم زلال می‌شود.';
+ else if(S.turb>.55)m='آب‌آهک شیری شد؛ ذرات CaCO₃ آهسته ته‌نشین می‌شوند (با هم‌زدن دوباره معلق می‌شوند).';
+ else if(S.lit&&S.flow<.05)m='گاز کافی وارد نمی‌شود؛ قیف را دقیق‌تر بالای شعله و نزدیک‌تر ببر.';
+ else m='گاز در حال ورود به محلول است؛ تغییر رنگ را دنبال کن.';
+ $('msg').textContent=m;
+ $('i1').textContent=fa(S.temp)+' °C';$('i2').textContent=fa(S.co2*1000/1,0)+' µmol';$('i3').textContent=fa(S.milk*100,0)+'٪';$('i4').textContent=fa(S.D/Math.max(S.w*.25,.02),1)+' mM';$('i5').textContent=fa(S.candleH*10)+' cm';
+}
+function loop(){requestAnimationFrame(loop);const n=performance.now(),dt=Math.min(.05,(n-T0)/1000);T0=n;tm+=dt;step(dt*SP,tm);oc.update();rd.render(sc,cam)}
+function rs(){rd.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',rs);rs();loop();
+</script></body></html>
